@@ -79,8 +79,10 @@ struct femtoDreamProducerTask {
   Configurable<bool> ConfDebugOutput{"ConfDebugOutput", true, "Debug output"};
 
   // Choose if filtering or skimming version is run
-
   Configurable<bool> ConfIsTrigger{"ConfIsTrigger", false, "Store all collisions"};
+
+  // Choose if running on converted data or pilot beam
+  Configurable<bool> ConfIsRun3{"ConfIsRun3", false, "Running on Pilot beam"};
 
   /// Event cuts
   FemtoDreamCollisionSelection colCuts;
@@ -131,7 +133,7 @@ struct femtoDreamProducerTask {
 
   void init(InitContext&)
   {
-    colCuts.setCuts(ConfEvtZvtx, ConfEvtTriggerCheck, ConfEvtTriggerSel, ConfEvtOfflineCheck);
+    colCuts.setCuts(ConfEvtZvtx, ConfEvtTriggerCheck, ConfEvtTriggerSel, ConfEvtOfflineCheck, ConfIsRun3);
     colCuts.init(&qaRegistry);
 
     trackCuts.setSelection(ConfTrkCharge, femtoDreamTrackSelection::kSign, femtoDreamSelection::kEqual);
@@ -189,16 +191,12 @@ struct femtoDreamProducerTask {
     const auto spher = colCuts.computeSphericity(col, tracks);
     colCuts.fillQA(col);
 
-    std::cout << "###########################" << std::endl;
-    std::cout << "###########################" << std::endl;
-    std::cout << "#########HELLO##################" << std::endl;
-    std::cout << "timestamp = " << bc.timestamp() << std::endl;
-    std::cout << "###########################" << std::endl;
-    std::cout << "###########################" << std::endl;
-    std::cout << "###########################" << std::endl;
-
     // now the table is filled
-    outputCollision(vtxZ, mult, spher, bc.timestamp());
+    if(ConfIsRun3) {
+      outputCollision(vtxZ, col.multT0A(), spher, bc.timestamp());
+    } else {
+            outputCollision(vtxZ, mult, spher, bc.timestamp());
+    }
 
     int childIDs[2] = {0, 0};    // these IDs are necessary to keep track of the children
     std::vector<int> tmpIDtrack; // this vector keeps track of the matching of the primary track table row <-> aod::track table global index

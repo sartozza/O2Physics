@@ -72,13 +72,16 @@ struct femtoDreamPairTaskTrackTrack {
 
   /// Particle 1
   Configurable<int> ConfPDGCodePartOne{"ConfPDGCodePartOne", 2212, "Particle 1 - PDG code"};
-  Configurable<uint32_t> ConfCutPartOne{"ConfCutPartOne", 5542986, "Particle 1 - Selection bit from cutCulator"};
+  Configurable<uint32_t> ConfCutPartOne{"ConfCutPartOne", 5523754, "Particle 1 - Selection bit from cutCulator"};
   Configurable<std::vector<int>> ConfPIDPartOne{"ConfPIDPartOne", std::vector<int>{2}, "Particle 1 - Read from cutCulator"}; // we also need the possibility to specify whether the bit is true/false ->std>>vector<std::pair<int, int>>int>>
 
   /// Partition for particle 1
+  // Partition<aod::FemtoDreamParticles> partsOne = (aod::femtodreamparticle::partType == uint8_t(aod::femtodreamparticle::ParticleType::kTrack)) &&
+  //                                                (aod::femtodreamparticle::pt < cfgCutTable->get("PartOne", "MaxPt")) &&
+  //                                                ((aod::femtodreamparticle::cut & ConfCutPartOne) == ConfCutPartOne);
+
   Partition<aod::FemtoDreamParticles> partsOne = (aod::femtodreamparticle::partType == uint8_t(aod::femtodreamparticle::ParticleType::kTrack)) &&
-                                                 (aod::femtodreamparticle::pt < cfgCutTable->get("PartOne", "MaxPt")) &&
-                                                 ((aod::femtodreamparticle::cut & ConfCutPartOne) == ConfCutPartOne);
+                                                 (aod::femtodreamparticle::pt < cfgCutTable->get("PartOne", "MaxPt"));
 
   /// Histogramming for particle 1
   FemtoDreamParticleHisto<aod::femtodreamparticle::ParticleType::kTrack, 1> trackHistoPartOne;
@@ -86,13 +89,16 @@ struct femtoDreamPairTaskTrackTrack {
   /// Particle 2
   Configurable<bool> ConfIsSame{"ConfIsSame", false, "Pairs of the same particle"};
   Configurable<int> ConfPDGCodePartTwo{"ConfPDGCodePartTwo", 2212, "Particle 2 - PDG code"};
-  Configurable<uint32_t> ConfCutPartTwo{"ConfCutPartTwo", 5542986, "Particle 2 - Selection bit"};
+  Configurable<uint32_t> ConfCutPartTwo{"ConfCutPartTwo", 5542986, "Particle 2 - Selection bit"};                            ///default 5542986
   Configurable<std::vector<int>> ConfPIDPartTwo{"ConfPIDPartTwo", std::vector<int>{2}, "Particle 2 - Read from cutCulator"}; // we also need the possibility to specify whether the bit is true/false ->std>>vector<std::pair<int, int>>
 
   /// Partition for particle 2
+  // Partition<aod::FemtoDreamParticles> partsTwo = (aod::femtodreamparticle::partType == uint8_t(aod::femtodreamparticle::ParticleType::kTrack)) &&
+  //                                                (aod::femtodreamparticle::pt < cfgCutTable->get("PartTwo", "MaxPt")) &&
+  //                                                ((aod::femtodreamparticle::cut & ConfCutPartTwo) == ConfCutPartTwo);
+
   Partition<aod::FemtoDreamParticles> partsTwo = (aod::femtodreamparticle::partType == uint8_t(aod::femtodreamparticle::ParticleType::kTrack)) &&
-                                                 (aod::femtodreamparticle::pt < cfgCutTable->get("PartTwo", "MaxPt")) &&
-                                                 ((aod::femtodreamparticle::cut & ConfCutPartTwo) == ConfCutPartTwo);
+                                                 (aod::femtodreamparticle::pt < cfgCutTable->get("PartTwo", "MaxPt"));
 
   /// Histogramming for particle 2
   FemtoDreamParticleHisto<aod::femtodreamparticle::ParticleType::kTrack, 2> trackHistoPartTwo;
@@ -165,12 +171,6 @@ struct femtoDreamPairTaskTrackTrack {
       LOGF(info, "Retrieved GRP for timestamp %llu with magnetic field of %d kG", timestamp, grpo->getNominalL3Field());
     }
     float output = 0.1 * (grpo->getNominalL3Field());
-    std::cout << "###################################" << std::endl;
-    std::cout << "###################################" << std::endl;
-    std::cout << "Mag Field (T) = " << output << std::endl;
-    std::cout << "###################################" << std::endl;
-    std::cout << "###################################" << std::endl;
-
     return output;
   }
 
@@ -236,16 +236,29 @@ struct femtoDreamPairTaskTrackTrack {
     eventHisto.fillQA(col);
     /// Histogramming same event
     for (auto& part : partsOne) {
-      if (!isFullPIDSelected(part.pidcut(), part.p(), cfgCutTable->get("PartOne", "PIDthr"), vPIDPartOne, cfgCutTable->get("PartOne", "nSigmaTPC"), cfgCutTable->get("PartOne", "nSigmaTPCTOF"))) {
+      if ((part.cut() & ConfCutPartOne) != ConfCutPartOne) {
+        std::cout << "######## PARTICLE ONE CUTS NOT A PROTON ##############" << std::endl;
         continue;
+      } else {
+        std::cout << "##### WE HAVE A GOOD PROTON #####" << std::endl;
+        std::cout << "aod::femtodreamparticle::cut" << part.cut() << std::endl;
+        std::cout << "ConfCutPartOne" << ConfCutPartOne << std::endl;
+        std::cout << "###########################################" << std::endl;
       }
+        if (!isFullPIDSelected(part.pidcut(), part.p(), cfgCutTable->get("PartOne", "PIDthr"), vPIDPartOne, cfgCutTable->get("PartOne", "nSigmaTPC"), cfgCutTable->get("PartOne", "nSigmaTPCTOF"))) {
+            std::cout << "##############Particle one is not PID proton #############################" << std::endl;
+          continue;
+        }
       trackHistoPartOne.fillQA(part);
+      std::cout << "##############Particle one is good PID proton #############################" << std::endl;
     }
     if (!ConfIsSame) {
       for (auto& part : partsTwo) {
         if (!isFullPIDSelected(part.pidcut(), part.p(), cfgCutTable->get("PartTwo", "PIDthr"), vPIDPartTwo, cfgCutTable->get("PartTwo", "nSigmaTPC"), cfgCutTable->get("PartTwo", "nSigmaTPCTOF"))) {
+          std::cout << "##############Particle two is not PID proton #############################" << std::endl;
           continue;
         }
+        std::cout << "##############Particle two is good PID proton #############################" << std::endl;
         trackHistoPartTwo.fillQA(part);
       }
     }
